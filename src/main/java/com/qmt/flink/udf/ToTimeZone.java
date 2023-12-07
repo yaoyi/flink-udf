@@ -28,6 +28,7 @@ public class ToTimeZone extends ScalarFunction {
     MARKETPLACE_ID_TO_TIMEZONE.put("A19VAU5U5O7RUS", "Asia/Singapore");
   }
   public String eval(String marketplaceId) {
-    return MARKETPLACE_ID_TO_TIMEZONE.get(marketplaceId) || 'UTC';
+    timezone = MARKETPLACE_ID_TO_TIMEZONE.get(marketplaceId)
+    return timezone == null ? "UTC" : timezone;
   }
 }
