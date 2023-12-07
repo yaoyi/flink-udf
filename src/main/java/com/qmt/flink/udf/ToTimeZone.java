@@ -19,6 +19,7 @@ public class ToTimeZone extends ScalarFunction {
     MARKETPLACE_ID_TO_TIMEZONE.put("A2NODRKZP88ZB9", "Europe/Stockholm");
     MARKETPLACE_ID_TO_TIMEZONE.put("A1C3SOZRARQ6R3", "Europe/Warsaw");
     MARKETPLACE_ID_TO_TIMEZONE.put("A33AVAJ2PDY3EV", "Europe/Istanbul");
+    MARKETPLACE_ID_TO_TIMEZONE.put("AMEN7PMS3EDWL",  "Europe/Brussels");
     MARKETPLACE_ID_TO_TIMEZONE.put("A2VIGQ35RCS4UG", "Asia/Dubai");
     MARKETPLACE_ID_TO_TIMEZONE.put("A17E79C6D8DWNP", "Asia/Riyadh");
     MARKETPLACE_ID_TO_TIMEZONE.put("A21TJRUUN4KGV",  "Asia/Kolkata");
@@ -27,6 +28,6 @@ public class ToTimeZone extends ScalarFunction {
     MARKETPLACE_ID_TO_TIMEZONE.put("A19VAU5U5O7RUS", "Asia/Singapore");
   }
   public String eval(String marketplaceId) {
-    return MARKETPLACE_ID_TO_TIMEZONE.get(marketplaceId);
+    return MARKETPLACE_ID_TO_TIMEZONE.get(marketplaceId) || 'UTC';
   }
 }
