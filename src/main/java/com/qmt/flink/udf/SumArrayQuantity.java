@@ -1,4 +1,4 @@
-package com.yourcompany.flink.udf;
+package com.qmt.flink.udf;
 
 import org.apache.flink.table.annotation.DataTypeHint;
 import org.apache.flink.table.annotation.FunctionHint;
