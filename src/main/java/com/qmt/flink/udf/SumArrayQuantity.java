@@ -1,89 +1,83 @@
 package com.qmt.flink.udf;
 
-import org.apache.flink.table.annotation.DataTypeHint;
-import org.apache.flink.table.annotation.FunctionHint;
 import org.apache.flink.table.functions.ScalarFunction;
 import org.apache.flink.types.Row;
 
 /**
- * 高性能数组求和 UDF
- *
- * 功能: 计算订单项数组中所有 Quantity 的总和
- *
- * 输入: ARRAY<ROW<OrderItemId STRING, SellerSKU STRING, SupplySourceId STRING, Quantity INT>>
- * 输出: INT (总和)
- *
- * 性能优化:
- * 1. 使用原始类型 int 避免装箱
- * 2. 直接数组访问，避免迭代器开销
- * 3. 空值检查优化
- *
- * 使用示例:
- * SELECT sum_array_quantity(order_items) FROM orders;
+ * 数组求和 UDF - 兼容 Flink SQL ARRAY<ROW> 类型
  */
-@FunctionHint(
-    input = @DataTypeHint("ARRAY<ROW<OrderItemId STRING, SellerSKU STRING, SupplySourceId STRING, Quantity INT>>"),
-    output = @DataTypeHint("INT")
-)
 public class SumArrayQuantity extends ScalarFunction {
 
     /**
-     * 计算数组中所有 Quantity 的总和
+     * 接受 Object 类型，在运行时处理类型转换
      *
-     * @param items 订单项数组，格式: ROW<OrderItemId, SellerSKU, SupplySourceId, Quantity>
-     * @return 数量总和，如果数组为空或 null 返回 0
+     * @param itemsObj Flink SQL 的 ARRAY<ROW> 对象
+     * @return 数量总和
      */
-    public int eval(
-        @DataTypeHint("ARRAY<ROW<OrderItemId STRING, SellerSKU STRING, SupplySourceId STRING, Quantity INT>>")
-        Row[] items
-    ) {
-        // 快速路径: 空检查
-        if (items == null || items.length == 0) {
+    public Integer eval(Object itemsObj) {
+        // 处理 null
+        if (itemsObj == null) {
             return 0;
         }
 
-        // 累加数量（使用原始类型避免装箱）
+        // Flink SQL 的 ARRAY 在运行时可能是 Object[] 或 Row[]
+        Object[] items;
+
+        if (itemsObj instanceof Object[]) {
+            items = (Object[]) itemsObj;
+        } else if (itemsObj instanceof Row[]) {
+            items = (Row[]) itemsObj;
+        } else {
+            // 未知类型，返回 0
+            return 0;
+        }
+
+        if (items.length == 0) {
+            return 0;
+        }
+
         int total = 0;
 
-        // 直接数组访问，性能最优
-        for (int i = 0; i < items.length; i++) {
-            Row item = items[i];
-
-            // 跳过 null 行
-            if (item == null) {
+        // 遍历数组
+        for (Object itemObj : items) {
+            if (itemObj == null) {
                 continue;
             }
 
-            // Quantity 在第 4 个位置（索引 3）
-            // ROW 结构: [0]=OrderItemId, [1]=SellerSKU, [2]=SupplySourceId, [3]=Quantity
-            Integer quantity = (Integer) item.getField(3);
-
-            // 只累加非 null 且大于 0 的值
-            if (quantity != null && quantity > 0) {
-                total += quantity;
+            // 每个 item 应该是 Row 类型
+            Row item;
+            if (itemObj instanceof Row) {
+                item = (Row) itemObj;
+            } else {
+                continue;
             }
-        }
 
-        return total;
-    }
+            // 获取 Quantity 字段（索引 3）
+            // ROW 结构: [0]=OrderItemId, [1]=SellerSKU, [2]=SupplySourceId, [3]=Quantity
+            Object quantityObj = item.getField(3);
 
-    /**
-     * 可选: 重载方法，支持过滤条件
-     * 这个版本可以在后续扩展时使用
-     */
-    public int eval(Row[] items, String filterField, String filterValue) {
-        if (items == null || items.length == 0) {
-            return 0;
-        }
+            if (quantityObj != null) {
+                int quantity = 0;
 
-        int total = 0;
-        for (Row item : items) {
-            if (item == null) continue;
+                // 处理不同的数值类型
+                if (quantityObj instanceof Integer) {
+                    quantity = (Integer) quantityObj;
+                } else if (quantityObj instanceof Long) {
+                    quantity = ((Long) quantityObj).intValue();
+                } else if (quantityObj instanceof Double) {
+                    quantity = ((Double) quantityObj).intValue();
+                } else if (quantityObj instanceof String) {
+                    try {
+                        quantity = Integer.parseInt((String) quantityObj);
+                    } catch (NumberFormatException e) {
+                        // 忽略无法解析的值
+                        continue;
+                    }
+                }
 
-            // 这里可以添加过滤逻辑
-            Integer quantity = (Integer) item.getField(3);
-            if (quantity != null && quantity > 0) {
-                total += quantity;
+                if (quantity > 0) {
+                    total += quantity;
+                }
             }
         }
 
