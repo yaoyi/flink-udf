@@ -1,10 +1,12 @@
 package com.qmt.flink.udf;
 
+import org.apache.flink.table.annotation.DataTypeHint;
+import org.apache.flink.table.annotation.InputGroup;
 import org.apache.flink.table.functions.ScalarFunction;
 
 public class SumArrayQuantity extends ScalarFunction {
 
-    public Integer eval(Object arr) {
+    public Integer eval(@DataTypeHint(inputGroup = InputGroup.ANY) Object arr) {
         if (arr == null) {
             return 0;
         }
